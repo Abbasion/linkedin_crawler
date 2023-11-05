@@ -1,0 +1,206 @@
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+import time
+import os
+import pickle
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.keys import Keys
+# from webdriver_manager.chrome import ChromeDriverManager
+from selenium import webdriver
+# from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service
+
+option = Options()
+# service = Service(executable_path="/home/maazshoaib/Desktop/linkedin_scraping/chromedriver")
+# service = Service(executable_path="/home/maazshoaib/Desktop/linkedin_scraping/chromedriver")
+option.add_experimental_option("detach", True)
+# driver = webdriver.Chrome(service=service)
+driver = webdriver.Chrome()
+driver.maximize_window()
+
+
+def saveCookie():
+    # creating a webdriver object
+
+    try:
+        pickle.dump(driver.get_cookies(), open("cookie.pkl", "wb"))  # writing in pickle file
+        print('Cookie file successfully created.')
+    except Exception as e:
+        print(e)
+
+
+def load_cookie():
+    with open('/home/maazshoaib/Desktop/linkedin_scraping/cookie.pkl', 'rb') as cookiesfile:
+        cookies = pickle.load(cookiesfile)
+        print(cookies)
+        for cookie in cookies:
+
+            try:
+                driver.add_cookie(cookie)
+                print(cookie['expiry'])
+                print(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(cookie["expiry"])))
+            except Exception as e:
+                pass
+
+
+# def load_cookies():
+#     cookies = pickle.load(open("cookie.pkl", "rb"))
+#     for cookie in cookies:
+#         # print(cookie)
+#         # s = requests.Session()
+#         # cookie['domain'] = 'www.linkedin.com/home'
+#         try:
+#             driver.add_cookie(cookie)
+#         except Exception as e:
+#             pass
+# driver.get("https://www.linkedin.com/in/ms-a-584752286/")
+
+
+def linkedin_function():
+    try:
+        email = "maazshoaibabbasi456@gmail.com"
+        password = "Abbasi123@gmail"
+        linkedin_home = "https://www.linkedin.com/home"
+        driver.get(linkedin_home)
+        time.sleep(3)
+        file_path = '/home/maazshoaib/Desktop/linkedin_scraping/cookie.pkl'
+        search_file = 'cookie.pkl'
+
+        try:
+            if os.path.exists(file_path):
+                load_cookie()
+                driver.refresh()
+            else:
+                driver.implicitly_wait(3)
+                username_input = driver.find_element(By.XPATH, '//*[@id="session_key"]')
+                password_input = driver.find_element("xpath", '//*[@id="session_password"]')
+                submit_button = driver.find_element("xpath",
+                                                    '//*[@id="main-content"]/section[1]/div/div/form/div[2]/button')
+
+                username_input.send_keys(email)
+                password_input.send_keys(password)
+                submit_button.click()
+
+                time.sleep(30)
+                saveCookie()
+        except Exception as ex:
+            print(ex)
+        # cookies = driver.get_cookies()
+        # print(list(cookies))
+        # pickle.dump(cookies,open('cookies.pkl','wb'))
+
+        search_input = driver.find_element('xpath', '//*[@id="global-nav-typeahead"]/input')
+        search_input.send_keys("rapidev", (Keys.ENTER))
+        time.sleep(10)
+        company_button = driver.find_element('xpath',
+                                             '//*[@id="search-reusables__filters-bar"]/ul/li[2]/button').click()
+        time.sleep(10)
+        company_profile = driver.find_element(By.XPATH,
+                                              ".//ul[contains(@class, 'entity-result-list')]//a[text()='Rapidev' and contains(@class,'app-aware-link ')] [1]").click()
+        time.sleep(10)
+        people_page = driver.find_element('xpath', ".//nav//a[text()='People']").click()
+        time.sleep(10)
+        hr_filter = driver.find_element('xpath', "//input[contains(@placeholder,'Search employees by title')]")
+        hr_filter.send_keys("HR", (Keys.ENTER))
+        time.sleep(10)
+        people_profile = driver.find_elements('xpath', "//ul/li[contains(@class,'grid grid__col--lg-8')]")
+        employees = []
+        urls = ['https://www.linkedin.com/in/jordan-anthus-6a4b03248/']
+        for employee in people_profile:
+            try:
+                # print(employee.find_element(By.TAG_NAME,'img').text)
+                employee_name = employee.find_element(By.CLASS_NAME, 'artdeco-entity-lockup__title').text
+                employee_image = employee.find_element(By.CLASS_NAME, 'evi-image').get_attribute('src')
+                employee_profile_url = employee.find_element(By.CLASS_NAME, 'app-aware-link').get_attribute('href')
+                designaiton = employee.find_element(By.CLASS_NAME, 'lt-line-clamp--multi-line').text
+                emp = {employee_name: employee_name,
+                       'employee_image': employee_image,
+                       'employee_profile_url': employee_profile_url,
+                       'designaiton': designaiton}
+
+                # print(employee)
+                # print(employee.text)
+                urls.append(employee_profile_url)
+                print(employee_profile_url)
+                employees.append(emp)
+                print("vvvvvvvvvvv")
+            except Exception as ex:
+                pass
+        employees_data = []
+        for url in urls:
+            try:
+                print(url)
+                driver.get(url)
+                time.sleep(5)
+                contact_info = driver.find_element('xpath', "//a[contains(@class,'break-words')]")
+                contact_info.click()
+                time.sleep(5)
+                contact_infod = driver.find_elements('xpath',
+                                                     "//section[contains(@class,'pv-contact-info__contact-type')]")
+                for inf in contact_infod:
+                    if "Email" in inf.text:
+                        email = inf.find_element('xpath', "//a[contains(@href,'mailto')]").text
+                        print(email)
+
+                    # if "Phone" in inf.text:
+                    #     print(inf.text)
+                    print(len(contact_infod))
+                try:
+                    driver.find_element('xpath', "//li-icon[@type='cancel-icon']").click()
+                    time.sleep(1)
+                    message_button = ''
+                    try:
+                        # message_button = driver.find_element('xpath',"(//button[@class='artdeco-button artdeco-button--2 artdeco-button--primary ember-view pvs-profile-actions__action'])[2]").text
+                        button_text = driver.find_element('xpath',"(//button[@class='artdeco-button artdeco-button--2 artdeco-button--primary ember-view pvs-profile-actions__action']/span)[1]").text
+                        print(button_text)
+                        if button_text == 'Message':
+                            message_button = driver.find_element('xpath',"(//button[@class='artdeco-button artdeco-button--2 artdeco-button--primary ember-view pvs-profile-actions__action'])[1]")
+
+                    except:
+                        pass
+                    try:
+                        message_text = driver.find_element('xpath',"(//button[@class='artdeco-button artdeco-button--2 artdeco-button--primary ember-view pvs-profile-actions__action']/span)[2]").text
+                        print(message_text)
+                        if message_text == 'Message':
+                            message_button = driver.find_element('xpath',"(//button[@class='artdeco-button artdeco-button--2 artdeco-button--primary ember-view pvs-profile-actions__action'])[2]")
+
+                    except:
+                        pass
+                    message_button.click()
+                    # subject_input = driver.find_element('xpath',"//input[@name='subject']")
+                    # subject_input.send_keys("Job finding Testing bot",(Keys.ENTER))
+                    time.sleep(2)
+                    message_input_text = driver.find_element('xpath', "//div[@role='textbox']")
+                    time.sleep(2)
+                    message_input_text.send_keys("hii this is testing of linkedin Scraper")
+                    time.sleep(2)
+                    send_btn = driver.find_element('xpath', "//button[@type='submit']")
+                    send_btn.click()
+                    # send_message_button = driver.find_element('xpath',"//div[@role='textbox']")
+                    # send_message_button.click()
+                    time.sleep(2)
+                    attach_file = driver.find_element('xpath', "//input[@type='file']")
+                    # attach_file.click()
+                    attach_file.send_keys("/home/maazshoaib/Desktop/linkedin_scraping/cv.pdf")
+                    time.sleep(4)
+                    print('----------------')
+                    print(os.getcwd())
+                    cv_path = "/home/maazshoaib/Desktop/linkedin_scraping/cv.pdf"
+                    print('----------------')
+                    driver.find_element("xpath","//button[@class='msg-overlay-bubble-header__control artdeco-button artdeco-button--circle artdeco-button--muted artdeco-button--1 artdeco-button--tertiary ember-view']").click()
+                except Exception as ex:
+                    print(ex)
+            except Exception as ex:
+                print(ex)
+
+        print(employees)
+        print(len(employees))
+        print(len(people_profile))
+        print("testing")
+
+    except Exception as ex:
+        print(ex)
+    driver.quit()
+
+
+linkedin_function()
